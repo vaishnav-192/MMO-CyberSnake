@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Neon CyberSnake MMO - A multiplayer snake game with real-time competition">
+    <meta name="theme-color" content="#39ff14">
+    
+    <!-- Open Graph / Social -->
+    <meta property="og:title" content="Neon CyberSnake MMO">
+    <meta property="og:description" content="Join the neon arena and compete with players worldwide in this retro-futuristic snake game!">
+    <meta property="og:type" content="website">
+    
+    <title>Neon CyberSnake MMO</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, collection, doc, setDoc, getDoc, addDoc,
+            onSnapshot, deleteDoc, serverTimestamp, query, where, orderBy, limit 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global export for game logic access
+        window.Firebase = {
+            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
+            getFirestore, collection, doc, setDoc, getDoc, addDoc,
+            onSnapshot, deleteDoc, serverTimestamp, query, where, orderBy, limit
+        };
+        
+        // Dispatch event to signal Firebase is ready
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <div class="scanlines"></div>
+        
+        <!-- Top UI Bar -->
+        <div class="ui-layer">
+            <div>
+                <span id="score">SCORE: 0</span>
+                <span id="length" style="margin-left: 20px;">LENGTH: 3</span>
+            </div>
+            <div id="player-count">ONLINE: 1</div>
+        </div>
+
+        <!-- Live Leaderboard -->
+        <div id="leaderboard"></div>
+
+        <!-- Kill Feed -->
+        <div id="kill-feed"></div>
+
+        <!-- Status Bar -->
+        <div class="status-bar" id="status-msg">CONNECTING TO NET...</div>
+
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="screen">
+            <h1 class="pulse">INITIALIZING<span class="loading-dots"></span></h1>
+            <p style="color: #888;">Connecting to game server...</p>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen hidden">
+            <h1>🐍 MMO SNAKE</h1>
+            <p style="color: var(--color-secondary); margin-bottom: 20px;">Enter the Neon Arena</p>
+            
+            <input type="text" id="username-input" maxlength="12" placeholder="YOUR NAME" autocomplete="off">
+            <br>
+            <button class="btn" onclick="startGame()">▶ JOIN SERVER</button>
+            <button class="btn btn-secondary" onclick="showLeaderboard()" style="margin-left: 10px;">🏆 LEADERBOARD</button>
+            
+            <div class="instructions">
+                <span>↑</span><span>↓</span><span>←</span><span>→</span> or 
+                <span>W</span><span>A</span><span>S</span><span>D</span> to Move
+            </div>
+            
+            <!-- Quick Leaderboard Preview -->
+            <h2 style="margin-top: 25px;">🏆 TOP PLAYERS</h2>
+            <table class="highscores-table">
+                <thead>
+                    <tr>
+                        <th class="rank-col">#</th>
+                        <th>NAME</th>
+                        <th class="kills-col">☠</th>
+                        <th class="score-col">SCORE</th>
+                    </tr>
+                </thead>
+                <tbody id="start-highscores-body">
+                    <tr><td colspan="4" style="text-align: center; color: #666;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen hidden">
+            <h1 class="glitch">SIGNAL LOST</h1>
+            <p>Terminated by: <span id="killer-name" style="color: var(--color-food);">WALL</span></p>
+            
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <span class="stat-label">SCORE</span>
+                    <span class="stat-value" id="final-score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">LENGTH</span>
+                    <span class="stat-value" id="final-length">3</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">KILLS</span>
+                    <span class="stat-value" id="final-kills">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">RANK</span>
+                    <span class="stat-value" id="final-rank">--</span>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="resetGame()">⟳ RESPAWN</button>
+            <button class="btn btn-secondary" onclick="showLeaderboard()" style="margin-left: 10px;">🏆 SCORES</button>
+        </div>
+
+        <!-- Full Leaderboard Screen -->
+        <div id="leaderboard-screen" class="screen hidden">
+            <h1>🏆 LEADERBOARD</h1>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-alltime">ALL TIME</button>
+                <button class="tab-btn" data-tab="tab-today">TODAY</button>
+            </div>
+            
+            <div id="tab-alltime" class="tab-content active">
+                <table class="highscores-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">#</th>
+                            <th>NAME</th>
+                            <th class="kills-col">KILLS</th>
+                            <th class="score-col">SCORE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="highscores-body">
+                        <tr><td colspan="4" style="text-align: center; color: #666;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="tab-today" class="tab-content">
+                <table class="highscores-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">#</th>
+                            <th>NAME</th>
+                            <th class="kills-col">KILLS</th>
+                            <th class="score-col">SCORE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-highscores-body">
+                        <tr><td colspan="4" style="text-align: center; color: #666;">No games today</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <button class="btn" onclick="backToStart()" style="margin-top: 20px;">← BACK</button>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div id="mobile-controls">
+            <div class="controls-row">
+                <button class="control-btn" id="mobile-up">▲</button>
+            </div>
+            <div class="controls-row">
+                <button class="control-btn" id="mobile-left">◄</button>
+                <button class="control-btn" style="visibility: hidden;">●</button>
+                <button class="control-btn" id="mobile-right">►</button>
+            </div>
+            <div class="controls-row">
+                <button class="control-btn" id="mobile-down">▼</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Script -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
