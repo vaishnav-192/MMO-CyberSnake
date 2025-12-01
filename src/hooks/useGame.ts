@@ -13,6 +13,7 @@ import {
   subscribeToKillFeed,
   submitHighScore,
   setupDisconnectCleanup,
+  reportKill,
 } from '@/lib/firebase-service';
 import {
   Position,
@@ -101,7 +102,7 @@ export function useGame() {
   const remotePlayersRef = useRef(remotePlayers);
   const gameModeRef = useRef(gameMode);
   const lastSyncRef = useRef(0);
-  const tileCountRef = useRef(30);
+  const tileCountRef = useRef(CONFIG.TILE_COUNT); // Use fixed tile count from config
 
   // Update refs
   useEffect(() => {
@@ -230,6 +231,11 @@ export function useGame() {
       setCurrentScreen('gameOver');
 
       const currentStats = gameStateRef.current;
+      
+      // Report kill to Firebase kill feed (only in multiplayer and if killed by another player)
+      if (gameMode === 'multiplayer' && killerName !== 'SELF' && killerName !== 'WALL') {
+        await reportKill(killerName, playerName);
+      }
       
       // Update personal best stats
       setPersonalBest((prev) => {
@@ -406,10 +412,7 @@ export function useGame() {
     [gameState.isPlaying]
   );
 
-  // Set tile count when canvas resizes
-  const setTileCount = useCallback((count: number) => {
-    tileCountRef.current = count;
-  }, []);
+  // tileCountRef now uses fixed CONFIG.TILE_COUNT for consistent multiplayer grid
 
   // Reset game
   const resetGame = useCallback(() => {
@@ -468,7 +471,6 @@ export function useGame() {
     startGame,
     resetGame,
     handleInput,
-    setTileCount,
     liveLeaderboard,
   };
 }

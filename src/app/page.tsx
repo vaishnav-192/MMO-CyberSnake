@@ -33,7 +33,6 @@ export default function Home() {
     startGame,
     resetGame,
     handleInput,
-    setTileCount,
     liveLeaderboard,
   } = useGame();
 
@@ -114,7 +113,6 @@ export default function Home() {
         food={food}
         remotePlayers={remotePlayers}
         isPlaying={gameState.isPlaying}
-        onResize={setTileCount}
       />
       <div className="scanlines" />
 

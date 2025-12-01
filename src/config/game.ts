@@ -2,6 +2,7 @@
 export const CONFIG = {
   // Game Settings
   GRID_SIZE: 20,
+  TILE_COUNT: 30, // Fixed grid size (30x30) for consistent multiplayer
   GAME_SPEED: 120, // ms per tick
   SYNC_RATE: 150, // ms per network sync
   CLEANUP_THRESHOLD: 10000, // 10s timeout for ghost players

@@ -21,34 +21,35 @@ export function useGameCanvas({
   const animationFrameRef = useRef<number>();
 
   const drawGrid = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const cellSize = width / CONFIG.TILE_COUNT;
     ctx.strokeStyle = CONFIG.COLORS.GRID;
     ctx.lineWidth = 1;
     ctx.beginPath();
 
-    for (let x = 0; x <= width; x += CONFIG.GRID_SIZE) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-    }
-
-    for (let y = 0; y <= height; y += CONFIG.GRID_SIZE) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+    for (let i = 0; i <= CONFIG.TILE_COUNT; i++) {
+      const pos = i * cellSize;
+      ctx.moveTo(pos, 0);
+      ctx.lineTo(pos, height);
+      ctx.moveTo(0, pos);
+      ctx.lineTo(width, pos);
     }
 
     ctx.stroke();
   }, []);
 
-  const drawFood = useCallback((ctx: CanvasRenderingContext2D, foodPos: Position) => {
+  const drawFood = useCallback((ctx: CanvasRenderingContext2D, foodPos: Position, canvasWidth: number) => {
+    const cellSize = canvasWidth / CONFIG.TILE_COUNT;
     ctx.shadowBlur = 15;
     ctx.shadowColor = CONFIG.COLORS.FOOD;
     ctx.fillStyle = CONFIG.COLORS.FOOD;
 
-    const x = foodPos.x * CONFIG.GRID_SIZE + 2;
-    const y = foodPos.y * CONFIG.GRID_SIZE + 2;
-    const size = CONFIG.GRID_SIZE - 4;
+    const padding = cellSize * 0.1;
+    const x = foodPos.x * cellSize + padding;
+    const y = foodPos.y * cellSize + padding;
+    const size = cellSize - padding * 2;
 
     // Pulsing effect
-    const pulse = Math.sin(Date.now() / 200) * 2;
+    const pulse = Math.sin(Date.now() / 200) * (cellSize * 0.1);
     ctx.fillRect(x - pulse / 2, y - pulse / 2, size + pulse, size + pulse);
 
     ctx.shadowBlur = 0;
@@ -59,20 +60,22 @@ export function useGameCanvas({
       ctx: CanvasRenderingContext2D,
       snakeBody: Position[],
       color: string,
+      canvasWidth: number,
       labelName?: string
     ) => {
       if (!snakeBody || snakeBody.length === 0) return;
 
+      const cellSize = canvasWidth / CONFIG.TILE_COUNT;
       ctx.fillStyle = color;
       ctx.shadowBlur = 10;
       ctx.shadowColor = color;
 
       snakeBody.forEach((seg, i) => {
-        const size = i === 0 ? CONFIG.GRID_SIZE - 2 : CONFIG.GRID_SIZE - 4;
-        const offset = i === 0 ? 1 : 2;
+        const padding = i === 0 ? cellSize * 0.05 : cellSize * 0.1;
+        const size = cellSize - padding * 2;
         ctx.fillRect(
-          seg.x * CONFIG.GRID_SIZE + offset,
-          seg.y * CONFIG.GRID_SIZE + offset,
+          seg.x * cellSize + padding,
+          seg.y * cellSize + padding,
           size,
           size
         );
@@ -84,12 +87,13 @@ export function useGameCanvas({
       if (labelName && snakeBody[0]) {
         const head = snakeBody[0];
         ctx.fillStyle = '#fff';
-        ctx.font = '12px VT323, monospace';
+        const fontSize = Math.max(12, cellSize * 0.6);
+        ctx.font = `${fontSize}px VT323, monospace`;
         ctx.textAlign = 'center';
         ctx.fillText(
           labelName,
-          head.x * CONFIG.GRID_SIZE + CONFIG.GRID_SIZE / 2,
-          head.y * CONFIG.GRID_SIZE - 5
+          head.x * cellSize + cellSize / 2,
+          head.y * cellSize - 5
         );
       }
     },
@@ -108,16 +112,16 @@ export function useGameCanvas({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     drawGrid(ctx, canvas.width, canvas.height);
-    drawFood(ctx, food);
+    drawFood(ctx, food, canvas.width);
 
     // Draw remote players
     Object.values(remotePlayers).forEach((player) => {
-      drawSnake(ctx, player.snake, player.color || CONFIG.COLORS.ENEMY, player.name);
+      drawSnake(ctx, player.snake, player.color || CONFIG.COLORS.ENEMY, canvas.width, player.name);
     });
 
     // Draw self
     if (isPlaying) {
-      drawSnake(ctx, snake, CONFIG.COLORS.SELF);
+      drawSnake(ctx, snake, CONFIG.COLORS.SELF, canvas.width);
     }
 
     animationFrameRef.current = requestAnimationFrame(render);
@@ -133,7 +137,7 @@ export function useGameCanvas({
     };
   }, [render]);
 
-  // Resize handler
+  // Resize handler - canvas size adapts to screen but game logic uses fixed TILE_COUNT
   useEffect(() => {
     const handleResize = () => {
       const canvas = canvasRef.current;
@@ -143,14 +147,16 @@ export function useGameCanvas({
       const maxWidth = window.innerWidth - 40;
       const maxHeight = window.innerHeight - 100;
       
-      // Use the smaller dimension to keep it square, with a reasonable max
+      // Use the smaller dimension to keep it square
       let size = Math.min(maxWidth, maxHeight, 1000);
       
-      // Ensure it's a multiple of grid size for clean rendering
-      size = Math.floor(size / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+      // Ensure it's a multiple of TILE_COUNT for clean grid rendering
+      // Canvas size varies, but game grid is always TILE_COUNT x TILE_COUNT
+      const gridPixelSize = Math.floor(size / CONFIG.TILE_COUNT);
+      size = gridPixelSize * CONFIG.TILE_COUNT;
       
       // Minimum size
-      size = Math.max(size, 300);
+      size = Math.max(size, CONFIG.TILE_COUNT * 10);
       
       canvas.width = size;
       canvas.height = size;
@@ -166,5 +172,6 @@ export function useGameCanvas({
 }
 
 export function getTileCount(canvasSize: number): number {
-  return canvasSize / CONFIG.GRID_SIZE;
+  // Always return fixed tile count for consistent multiplayer
+  return CONFIG.TILE_COUNT;
 }
