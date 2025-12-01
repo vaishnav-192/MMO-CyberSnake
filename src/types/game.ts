@@ -61,3 +61,28 @@ export type Direction = {
 
 // Screen types
 export type ScreenType = 'loading' | 'start' | 'playing' | 'gameOver' | 'leaderboard';
+
+// Game mode
+export type GameMode = 'singleplayer' | 'multiplayer';
+
+// Player stats for display
+export interface PlayerStats {
+  highScore: number;
+  maxLength: number;
+  totalGames: number;
+  kills: number;
+}
+
+// Personal best data stored in localStorage
+export interface PersonalBest {
+  singleplayer: PlayerStats;
+  multiplayer: PlayerStats;
+}
+
+// Default empty stats
+export const DEFAULT_STATS: PlayerStats = {
+  highScore: 0,
+  maxLength: 0,
+  totalGames: 0,
+  kills: 0,
+};

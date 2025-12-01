@@ -22,7 +22,43 @@ import {
   GameState,
   ScreenType,
   Direction,
+  GameMode,
+  PersonalBest,
+  PlayerStats,
+  DEFAULT_STATS,
 } from '@/types';
+
+// LocalStorage keys
+const STORAGE_KEYS = {
+  USERNAME: 'cybersnake-username',
+  PERSONAL_BEST: 'cybersnake-personal-best',
+};
+
+// Load personal best from localStorage
+function loadPersonalBest(): PersonalBest {
+  if (typeof window === 'undefined') {
+    return { singleplayer: { ...DEFAULT_STATS }, multiplayer: { ...DEFAULT_STATS } };
+  }
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.PERSONAL_BEST);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Failed to load personal best:', e);
+  }
+  return { singleplayer: { ...DEFAULT_STATS }, multiplayer: { ...DEFAULT_STATS } };
+}
+
+// Save personal best to localStorage
+function savePersonalBest(best: PersonalBest): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.PERSONAL_BEST, JSON.stringify(best));
+  } catch (e) {
+    console.error('Failed to save personal best:', e);
+  }
+}
 
 export function useGame() {
   // Auth state
@@ -33,6 +69,10 @@ export function useGame() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('loading');
   const [playerName, setPlayerName] = useState('');
   const [statusMessage, setStatusMessage] = useState('CONNECTING TO NET...');
+
+  // Game mode state
+  const [gameMode, setGameMode] = useState<GameMode>('multiplayer');
+  const [personalBest, setPersonalBest] = useState<PersonalBest>(() => loadPersonalBest());
 
   // Game state
   const [snake, setSnake] = useState<Position[]>([]);
@@ -59,6 +99,7 @@ export function useGame() {
   const snakeRef = useRef(snake);
   const gameStateRef = useRef(gameState);
   const remotePlayersRef = useRef(remotePlayers);
+  const gameModeRef = useRef(gameMode);
   const lastSyncRef = useRef(0);
   const tileCountRef = useRef(30);
 
@@ -68,7 +109,8 @@ export function useGame() {
     snakeRef.current = snake;
     gameStateRef.current = gameState;
     remotePlayersRef.current = remotePlayers;
-  }, [direction, snake, gameState, remotePlayers]);
+    gameModeRef.current = gameMode;
+  }, [direction, snake, gameState, remotePlayers, gameMode]);
 
   // Initialize Firebase auth
   useEffect(() => {
@@ -143,15 +185,16 @@ export function useGame() {
 
   // Start game
   const startGame = useCallback(
-    (name: string) => {
+    (name: string, mode: GameMode = 'multiplayer') => {
       const finalName = name.trim() || `PLAYER ${Math.floor(Math.random() * 1000)}`;
       setPlayerName(finalName);
+      setGameMode(mode);
       localStorage.setItem('cybersnake-username', finalName);
       initSnake();
       setCurrentScreen('playing');
 
-      // Subscribe to players
-      if (user) {
+      // Only subscribe to multiplayer features if in multiplayer mode
+      if (mode === 'multiplayer' && user) {
         // Setup disconnect cleanup
         setupDisconnectCleanup(user.uid);
 
@@ -168,6 +211,12 @@ export function useGame() {
           unsubPlayers();
           unsubKillFeed();
         };
+      } else {
+        // Singleplayer mode - clear remote players
+        setRemotePlayers({});
+        remotePlayersRef.current = {};
+        setPlayerCount(1);
+        setKillFeed([]);
       }
     },
     [user, initSnake]
@@ -180,18 +229,39 @@ export function useGame() {
       setGameState((prev) => ({ ...prev, isPlaying: false, isDead: true }));
       setCurrentScreen('gameOver');
 
-      if (user) {
+      const currentStats = gameStateRef.current;
+      
+      // Update personal best stats
+      setPersonalBest((prev) => {
+        const modeStats = gameMode === 'singleplayer' ? prev.singleplayer : prev.multiplayer;
+        const newModeStats: PlayerStats = {
+          totalGames: modeStats.totalGames + 1,
+          highScore: Math.max(modeStats.highScore, currentStats.score),
+          kills: modeStats.kills + currentStats.kills,
+          maxLength: Math.max(modeStats.maxLength, currentStats.maxLength),
+        };
+        
+        const newBest: PersonalBest = gameMode === 'singleplayer' 
+          ? { ...prev, singleplayer: newModeStats }
+          : { ...prev, multiplayer: newModeStats };
+        
+        savePersonalBest(newBest);
+        return newBest;
+      });
+
+      // Only submit to leaderboard and remove player in multiplayer mode
+      if (gameMode === 'multiplayer' && user) {
         await submitHighScore(user.uid, {
           name: playerName,
-          score: gameStateRef.current.score,
-          kills: gameStateRef.current.kills,
-          maxLength: gameStateRef.current.maxLength,
+          score: currentStats.score,
+          kills: currentStats.kills,
+          maxLength: currentStats.maxLength,
         });
 
         await removePlayer(user.uid);
       }
     },
-    [user, playerName]
+    [user, playerName, gameMode]
   );
 
   // Game tick
@@ -209,15 +279,21 @@ export function useGame() {
 
       if (currentSnake.length === 0) return;
 
-      const head = {
+      let head = {
         x: currentSnake[0].x + currentDirection.dx,
         y: currentSnake[0].y + currentDirection.dy,
       };
 
-      // Wall collision
-      if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-        handleDeath('WALL');
-        return;
+      // Wall wrap-around (instead of death)
+      if (head.x < 0) {
+        head.x = tileCount - 1;
+      } else if (head.x >= tileCount) {
+        head.x = 0;
+      }
+      if (head.y < 0) {
+        head.y = tileCount - 1;
+      } else if (head.y >= tileCount) {
+        head.y = 0;
       }
 
       // Self collision
@@ -269,7 +345,8 @@ export function useGame() {
 
   // Sync to Firebase
   useEffect(() => {
-    if (!gameState.isPlaying || !user) return;
+    // Skip sync in singleplayer mode
+    if (!gameState.isPlaying || !user || gameMode === 'singleplayer') return;
 
     const syncLoop = setInterval(async () => {
       const now = Date.now();
@@ -286,7 +363,7 @@ export function useGame() {
     }, CONFIG.SYNC_RATE);
 
     return () => clearInterval(syncLoop);
-  }, [gameState.isPlaying, user, playerName]);
+  }, [gameState.isPlaying, user, playerName, gameMode]);
 
   // Cleanup ghosts
   useEffect(() => {
@@ -370,6 +447,10 @@ export function useGame() {
     // Player
     playerName,
     setPlayerName,
+
+    // Game mode
+    gameMode,
+    personalBest,
 
     // Game state
     snake,

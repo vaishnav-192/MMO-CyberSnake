@@ -108,17 +108,20 @@ export async function submitHighScore(
     return;
   }
   
-  const leaderboardRef = ref(db, `${CONFIG.PATHS.LEADERBOARD}/${userId}`);
+  // Use normalized player name as the key (lowercase, no spaces)
+  // This ensures same player name always updates the same entry
+  const normalizedName = scoreData.name.toLowerCase().replace(/\s+/g, '_');
+  const leaderboardRef = ref(db, `${CONFIG.PATHS.LEADERBOARD}/${normalizedName}`);
 
   try {
     const snapshot = await get(leaderboardRef);
     const existingData = snapshot.exists() ? snapshot.val() : null;
 
-    // Only update if new score is higher
+    // Only update if new score is higher than existing
     if (!existingData || scoreData.score > existingData.score) {
       console.log('Submitting high score:', scoreData);
       await set(leaderboardRef, {
-        name: scoreData.name,
+        name: scoreData.name, // Keep original display name
         score: scoreData.score,
         kills: scoreData.kills,
         maxLength: scoreData.maxLength,

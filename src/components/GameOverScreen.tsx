@@ -1,8 +1,12 @@
+import { GameMode } from '@/types';
+
 interface GameOverScreenProps {
   killer: string;
   score: number;
   length: number;
   kills: number;
+  rank: number | null;
+  gameMode: GameMode;
   onRespawn: () => void;
   onShowLeaderboard: () => void;
 }
@@ -12,9 +16,21 @@ export function GameOverScreen({
   score,
   length,
   kills,
+  rank,
+  gameMode,
   onRespawn,
   onShowLeaderboard,
 }: GameOverScreenProps) {
+  // Format rank display
+  const getRankDisplay = () => {
+    if (gameMode === 'singleplayer') return 'N/A';
+    if (rank === null || rank === 0) return '--';
+    if (rank === 1) return '🥇 #1';
+    if (rank === 2) return '🥈 #2';
+    if (rank === 3) return '🥉 #3';
+    return `#${rank}`;
+  };
+
   return (
     <div className="screen">
       <h1 className="glitch">SIGNAL LOST</h1>
@@ -38,7 +54,9 @@ export function GameOverScreen({
         </div>
         <div className="stat-item">
           <span className="stat-label">RANK</span>
-          <span className="stat-value">--</span>
+          <span className="stat-value" style={rank && rank <= 3 ? { color: 'gold' } : undefined}>
+            {getRankDisplay()}
+          </span>
         </div>
       </div>
 

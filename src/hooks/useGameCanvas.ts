@@ -139,8 +139,19 @@ export function useGameCanvas({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      let size = Math.min(window.innerWidth - 20, window.innerHeight - 150, 800);
+      // Calculate max size based on viewport
+      const maxWidth = window.innerWidth - 40;
+      const maxHeight = window.innerHeight - 100;
+      
+      // Use the smaller dimension to keep it square, with a reasonable max
+      let size = Math.min(maxWidth, maxHeight, 1000);
+      
+      // Ensure it's a multiple of grid size for clean rendering
       size = Math.floor(size / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+      
+      // Minimum size
+      size = Math.max(size, 300);
+      
       canvas.width = size;
       canvas.height = size;
     };

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useGame } from '@/hooks/useGame';
+import { GameMode } from '@/types';
 import {
   GameCanvas,
   StartScreen,
@@ -19,6 +20,8 @@ export default function Home() {
     statusMessage,
     playerName,
     setPlayerName,
+    gameMode,
+    personalBest,
     snake,
     food,
     gameState,
@@ -33,6 +36,21 @@ export default function Home() {
     setTileCount,
     liveLeaderboard,
   } = useGame();
+
+  // Calculate player's rank based on their score in the leaderboard
+  const playerRank = useMemo(() => {
+    if (gameMode === 'singleplayer' || !playerName) return null;
+    
+    // Normalize player name for comparison
+    const normalizedName = playerName.toLowerCase().replace(/\s+/g, '_');
+    
+    // Find player's position in leaderboard
+    const index = leaderboard.findIndex(
+      (entry) => entry.name.toLowerCase().replace(/\s+/g, '_') === normalizedName
+    );
+    
+    return index >= 0 ? index + 1 : null;
+  }, [leaderboard, playerName, gameMode]);
 
   // Load saved username on mount
   useEffect(() => {
@@ -85,6 +103,10 @@ export default function Home() {
     };
   }, [handleInput]);
 
+  const handleStartGame = (mode: GameMode) => {
+    startGame(playerName, mode);
+  };
+
   return (
     <div id="game-container">
       <GameCanvas
@@ -101,17 +123,24 @@ export default function Home() {
         <div>
           <span>SCORE: {gameState.score}</span>
           <span style={{ marginLeft: '20px' }}>LENGTH: {snake.length}</span>
+          {gameMode === 'singleplayer' && (
+            <span style={{ marginLeft: '20px', color: 'var(--color-accent)' }}>SOLO</span>
+          )}
         </div>
-        <div>ONLINE: {playerCount}</div>
+        <div>
+          {gameMode === 'multiplayer' ? `ONLINE: ${playerCount}` : 'OFFLINE'}
+        </div>
       </div>
 
-      {/* Live Leaderboard */}
-      {currentScreen === 'playing' && (
+      {/* Live Leaderboard - only in multiplayer */}
+      {currentScreen === 'playing' && gameMode === 'multiplayer' && (
         <LiveLeaderboard entries={liveLeaderboard()} />
       )}
 
-      {/* Kill Feed */}
-      {currentScreen === 'playing' && <KillFeed entries={killFeed} />}
+      {/* Kill Feed - only in multiplayer */}
+      {currentScreen === 'playing' && gameMode === 'multiplayer' && (
+        <KillFeed entries={killFeed} />
+      )}
 
       {/* Status Bar */}
       <div className="status-bar">{statusMessage}</div>
@@ -131,9 +160,10 @@ export default function Home() {
         <StartScreen
           username={playerName}
           onUsernameChange={setPlayerName}
-          onStart={() => startGame(playerName)}
+          onStart={handleStartGame}
           onShowLeaderboard={() => setCurrentScreen('leaderboard')}
           leaderboard={leaderboard}
+          personalBest={personalBest}
         />
       )}
 
@@ -144,6 +174,8 @@ export default function Home() {
           score={gameState.score}
           length={gameState.maxLength}
           kills={gameState.kills}
+          rank={playerRank}
+          gameMode={gameMode}
           onRespawn={resetGame}
           onShowLeaderboard={() => setCurrentScreen('leaderboard')}
         />
