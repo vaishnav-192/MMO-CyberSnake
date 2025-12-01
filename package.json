@@ -2,11 +2,12 @@
   "name": "mmo-cybersnake",
   "version": "1.0.0",
   "description": "Neon CyberSnake MMO - A multiplayer snake game with real-time competition",
-  "main": "index.html",
+  "private": true,
   "scripts": {
-    "dev": "npx serve .",
-    "start": "npx serve .",
-    "deploy": "vercel --prod"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "keywords": [
     "game",
@@ -14,19 +15,27 @@
     "multiplayer",
     "mmo",
     "firebase",
-    "realtime"
+    "realtime",
+    "nextjs",
+    "typescript"
   ],
   "author": "",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": ""
-  },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "firebase": "^12.6.0",
-    "vercel": "^48.12.0"
+    "firebase": "^9.23.0",
+    "next": "14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.0.4",
+    "typescript": "^5.3.3"
   }
 }

@@ -1,9 +1,7 @@
 {
   "version": 2,
   "name": "mmo-cybersnake",
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "public": true,
+  "framework": "nextjs",
   "headers": [
     {
       "source": "/(.*)",
@@ -21,30 +19,6 @@
           "value": "1; mode=block"
         }
       ]
-    },
-    {
-      "source": "/js/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/css/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }

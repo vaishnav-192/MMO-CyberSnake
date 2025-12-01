@@ -1,14 +1,34 @@
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment files
 .env
 .env.local
-.env.*.local
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 
@@ -16,13 +36,12 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Logs
+# Testing
+coverage/
+.nyc_output/
+
+# Playwright
+.playwright-mcp/
+
+# Misc
 *.log
-npm-debug.log*
-
-# Vercel
-.vercel
-
-# Build outputs
-dist/
-build/

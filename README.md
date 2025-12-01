@@ -1,195 +1,202 @@
 # 🐍 Neon CyberSnake MMO
 
-A retro-futuristic multiplayer snake game with real-time competition, leaderboards, and kill tracking.
+A retro-futuristic multiplayer snake game built with Next.js, TypeScript, and Firebase.
 
-![Neon CyberSnake](https://img.shields.io/badge/Game-MMO%20Snake-39ff14?style=for-the-badge&logo=game)
-![Firebase](https://img.shields.io/badge/Backend-Firebase-FFCA28?style=for-the-badge&logo=firebase)
-![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=for-the-badge&logo=vercel)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=for-the-badge&logo=typescript)
+![Firebase](https://img.shields.io/badge/Firebase-Realtime%20DB-FFCA28?style=for-the-badge&logo=firebase)
+![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel)
 
 ## 🎮 Features
 
 - **Real-time Multiplayer** - See and compete with other players in real-time
 - **Live Leaderboard** - Track top players during gameplay
-- **Persistent High Scores** - Your best scores are saved forever
+- **Persistent High Scores** - Your best scores are saved to Firebase
 - **Kill Tracking** - Get bonus points for eliminating other players
 - **Kill Feed** - See who's eliminating who in real-time
-- **Responsive Design** - Play on desktop or mobile
-- **Retro Cyberpunk Aesthetic** - Neon colors and CRT effects
+- **Responsive Design** - Play on desktop or mobile with touch controls
+- **Retro Cyberpunk Aesthetic** - Neon colors and CRT scanline effects
 
-## 🚀 Quick Start
+## 🛠️ Tech Stack
+
+- **[Next.js 14](https://nextjs.org/)** - React framework with App Router
+- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe development
+- **[Firebase](https://firebase.google.com/)** - Realtime Database & Anonymous Auth
+- **[Vercel](https://vercel.com/)** - Deployment platform
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- A Firebase project with Firestore enabled
-- Node.js 18+ (optional, for local development server)
-- Vercel account (for deployment)
+- Node.js 18+
+- Firebase project with Realtime Database enabled
 
-### Local Development
+### Installation
 
-1. Clone this repository
-2. Set up your Firebase configuration in `js/config.js`
-3. Run a local server:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/vaishnav-192/MMO-CyberSnake.git
+   cd MMO-CyberSnake
+   ```
 
-```bash
-# Using npm
-npm run dev
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-# Or using Python
-python -m http.server 8000
+3. **Set up environment variables**
+   
+   Create a `.env.local` file:
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.firebaseio.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   ```
 
-# Or using PHP
-php -S localhost:8000
-```
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-4. Open `http://localhost:8000` in your browser
+5. **Open [http://localhost:3000](http://localhost:3000)** in your browser
 
-## 🔧 Firebase Setup
+## 🔥 Firebase Setup
 
 ### 1. Create a Firebase Project
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Create a new project
-3. Enable **Firestore Database**
-4. Enable **Anonymous Authentication**
 
-### 2. Configure Firestore Rules
+### 2. Enable Authentication
 
-In Firebase Console → Firestore → Rules, add:
+1. Go to **Authentication** → **Sign-in method**
+2. Enable **Anonymous** authentication
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow read/write access to all documents under artifacts path
-    match /artifacts/{appId}/public/data/{document=**} {
-      allow read, write: if request.auth != null;
+### 3. Create Realtime Database
+
+1. Go to **Realtime Database** → **Create Database**
+2. Choose a location
+3. Start in **Test mode** (or set rules below)
+
+### 4. Set Database Rules
+
+```json
+{
+  "rules": {
+    "players": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "leaderboard": {
+      ".read": true,
+      ".write": "auth != null",
+      ".indexOn": ["score"]
+    },
+    "killFeed": {
+      ".read": true,
+      ".write": "auth != null",
+      ".indexOn": ["timestamp"]
     }
   }
 }
 ```
 
-### 3. Get Your Config
+### 5. Get Your Config
 
-1. Go to Project Settings → General
-2. Scroll to "Your apps" → Web app
-3. Copy the config object
-
-### 4. Update the Game
-
-Replace the Firebase config in `js/config.js`:
-
-```javascript
-return {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-```
+1. Go to **Project Settings** → **General**
+2. Scroll to "Your apps" → Add a **Web app**
+3. Copy the config values to your `.env.local`
 
 ## 📦 Deploy to Vercel
 
-### Option 1: Vercel CLI
+### Option 1: One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vaishnav-192/MMO-CyberSnake)
+
+### Option 2: Vercel CLI
 
 ```bash
-# Install Vercel CLI
 npm i -g vercel
-
-# Deploy
 vercel
-
-# Deploy to production
-vercel --prod
 ```
 
-### Option 2: Git Integration
+### Option 3: Git Integration
 
 1. Push your code to GitHub
-2. Go to [Vercel](https://vercel.com)
-3. Import your GitHub repository
-4. Click Deploy
-
-### Environment Variables (Optional)
-
-If you want to use environment variables for Firebase config:
-
-1. Go to your Vercel project settings
-2. Add environment variables:
-   - `FIREBASE_API_KEY`
-   - `FIREBASE_AUTH_DOMAIN`
-   - `FIREBASE_PROJECT_ID`
-   - `FIREBASE_STORAGE_BUCKET`
-   - `FIREBASE_MESSAGING_SENDER_ID`
-   - `FIREBASE_APP_ID`
+2. Import project in [Vercel Dashboard](https://vercel.com/new)
+3. Add environment variables from `.env.local`
+4. Deploy!
 
 ## 🎯 How to Play
 
-- **Arrow Keys** or **WASD** to move
-- **Eat food (red squares)** to grow and score points
-- **Avoid walls** and other snakes
-- **Crash into other players** to eliminate them (bonus points!)
-- **Climb the leaderboard** and become the top snake!
+| Control | Action |
+|---------|--------|
+| ↑ ↓ ← → | Move snake |
+| W A S D | Move snake |
+| Touch Swipe | Move (mobile) |
+| D-Pad | Move (mobile) |
 
-## 📁 Project Structure
-
-```
-MMO CyberSnake/
-├── index.html          # Main HTML file
-├── css/
-│   └── styles.css      # All styles
-├── js/
-│   ├── main.js         # Entry point
-│   ├── config.js       # Game configuration
-│   ├── firebase-service.js  # Firebase operations
-│   ├── game.js         # Game logic
-│   └── ui.js           # UI controller
-├── vercel.json         # Vercel configuration
-├── package.json        # Project metadata
-└── README.md           # This file
-```
-
-## 🏆 Scoring System
+### Scoring
 
 | Action | Points |
 |--------|--------|
 | Eat Food | +10 |
 | Kill Player | +50 |
 
-## 🔒 Security
+## 📁 Project Structure
 
-- Anonymous authentication for easy access
-- Firestore rules restrict access to authenticated users
-- No sensitive data stored client-side
+```
+MMO-CyberSnake/
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx      # Root layout with fonts
+│   │   ├── page.tsx        # Main game page
+│   │   └── globals.css     # Global styles
+│   ├── components/
+│   │   ├── GameCanvas.tsx
+│   │   ├── StartScreen.tsx
+│   │   ├── GameOverScreen.tsx
+│   │   ├── Leaderboard.tsx
+│   │   ├── LiveLeaderboard.tsx
+│   │   ├── KillFeed.tsx
+│   │   └── MobileControls.tsx
+│   ├── hooks/
+│   │   ├── useGame.ts      # Main game logic
+│   │   └── useGameCanvas.ts # Canvas rendering
+│   ├── lib/
+│   │   ├── firebase.ts     # Firebase initialization
+│   │   └── firebase-service.ts # Database operations
+│   ├── config/
+│   │   └── game.ts         # Game configuration
+│   └── types/
+│       └── game.ts         # TypeScript types
+├── package.json
+├── tsconfig.json
+├── next.config.js
+└── vercel.json
+```
 
 ## 🐛 Troubleshooting
 
-### "Connection Failed" Error
-- Check your Firebase configuration
-- Ensure Firestore and Anonymous Auth are enabled
-- Check browser console for specific errors
+### "Firebase error - URL not configured"
+- Ensure you've created a Realtime Database in Firebase Console
+- Verify the `NEXT_PUBLIC_FIREBASE_DATABASE_URL` is correct
 
-### Players Not Syncing
-- Verify Firestore rules are correct
-- Check network connectivity
-- Players timeout after 10 seconds of inactivity
+### "Auth error - configuration not found"
+- Enable Anonymous Authentication in Firebase Console
+- Check your API key is correct
 
-### Mobile Controls Not Working
-- Ensure touch events aren't blocked
-- Try refreshing the page
-- Check for JavaScript errors in console
+### Players not syncing
+- Verify Realtime Database rules allow read/write
+- Check browser console for Firebase errors
 
 ## 📄 License
 
 MIT License - Feel free to use, modify, and distribute!
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
 
 ---
 
